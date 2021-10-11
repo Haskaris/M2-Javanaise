@@ -9,21 +9,28 @@
 
 package jvn;
 
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+
+import irc.Irc;
+import irc.Sentence;
+import sun.rmi.registry.RegistryImpl;
+
 import java.io.Serializable;
 
 
-class Actor{
+class Actors{
 	public static boolean WRITER = true;
 	public static boolean READER = false;
 	
-	boolean type;
-	List<JvnRemoteServer> listActors;
+	private boolean type;
+	public List<JvnRemoteServer> listActors;
 	
-	Actor(){
+	Actors(){
 		listActors = new ArrayList<>();
 	}
 	
@@ -39,14 +46,16 @@ class Actor{
 		return type;
 	}
 	
-	public boolean changeType(boolean t) {
-		if(listActors.isEmpty()) {
-			type = t;
-			return true;
-		}
-		else {
-			return false;
-		}
+	public JvnRemoteServer getFirst() {
+		return listActors.get(0);
+	}
+
+	public boolean isEmpty() {
+		return listActors.isEmpty();
+	}
+	
+	public void changeType(boolean t) {
+		this.type = t;
 	}
 	
 	
@@ -60,8 +69,17 @@ public class JvnCoordImpl
 	
 	private HashMap<Integer, Serializable> idMap;
 	private HashMap<String, Integer> nameMap;
+	private HashMap<Integer, Actors> actorMap;
 	
 	private int globalId;
+	
+	public static void main(String argv[]) {
+		try {
+			new JvnCoordImpl();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
 	
 /**
   * Default constructor
@@ -70,7 +88,11 @@ public class JvnCoordImpl
 	private JvnCoordImpl() throws Exception {
 		this.idMap = new HashMap<>();
 		this.nameMap = new HashMap<>();
+		this.actorMap = new HashMap<>();
 		this.globalId = 0;
+		
+		Registry r = LocateRegistry.createRegistry(1099);
+		r.bind("coordinator", this);
 	}
 
   /**
@@ -80,13 +102,32 @@ public class JvnCoordImpl
   **/
   public int jvnGetObjectId()
   throws java.rmi.RemoteException,jvn.JvnException {
-
-	  this.idMap.put(globalId, null);
-	  
-	  globalId += 1;
-	  
-	  return globalId - 1;
+	  synchronized(this) {
+		  this.idMap.put(globalId, null);
+		  
+		  globalId += 1;
+		  
+		  return globalId - 1;
+	  }
   }
+  
+  /**
+   * Associate a symbolic name with a JVN object
+   * @param jon : the JVN object name
+   * @param jo  : the JVN object 
+   * @param js  : the remote reference of the JVNServer
+   * @throws java.rmi.RemoteException,JvnException
+   **/
+   public void jvnRegisterObject(JvnObject jo, JvnRemoteServer js)
+   throws java.rmi.RemoteException,jvn.JvnException{
+ 	  
+	   int tmpId = jo.jvnGetObjectId();
+ 	  
+  	  this.idMap.put(tmpId, jo.jvnGetSharedObject());
+  	  this.actorMap.put(tmpId, new Actors());
+  	  actorMap.get(tmpId).changeType(Actors.WRITER);
+  	  actorMap.get(tmpId).add(js);
+   }
   
   /**
   * Associate a symbolic name with a JVN object
@@ -98,24 +139,10 @@ public class JvnCoordImpl
   public void jvnRegisterObject(String jon, JvnObject jo, JvnRemoteServer js)
   throws java.rmi.RemoteException,jvn.JvnException{
 	  
-	  jvnRegisterObject(jo,js);
 	  int tmpId = jo.jvnGetObjectId();
 	  
 	  this.nameMap.put(jon, tmpId);
   }
-  
-  /**
-   * register an object without a name
-   * @param jo  : the JVN object 
-   * @param js  : the remote reference of the JVNServer
-   * @throws java.rmi.RemoteException,JvnException
-   **/
-   public void jvnRegisterObject(JvnObject jo, JvnRemoteServer js)
-   throws java.rmi.RemoteException,jvn.JvnException{
-
- 	  int tmpId = jo.jvnGetObjectId();
- 	  this.idMap.put(tmpId, jo);
-   }
   
   /**
   * Get the reference of a JVN object managed by a given JVN server 
@@ -126,8 +153,10 @@ public class JvnCoordImpl
   public JvnObject jvnLookupObject(String jon, JvnRemoteServer js)
   throws java.rmi.RemoteException,jvn.JvnException{
 	  if(nameMap.containsKey(jon)) {
-		  if(idMap.containsKey(nameMap.get(jon))) {
-			  return (JvnObject) idMap.get(nameMap.get(jon));
+		  int jvnId = nameMap.get(jon);
+		  if(idMap.containsKey(jvnId)) {
+			  JvnObject toReturn = new JvnObjectImpl(jvnId, idMap.get(jvnId), JvnObjectImpl.STATES.NL);
+			  return toReturn;
 		  }
 		  else {
 			  throw new jvn.JvnException();
@@ -145,8 +174,26 @@ public class JvnCoordImpl
   **/
    public Serializable jvnLockRead(int joi, JvnRemoteServer js)
    throws java.rmi.RemoteException, JvnException{
-    // to be completed
-    return null;
+	   if (actorMap.containsKey(joi) && idMap.containsKey(joi)) {
+		   
+		   Actors a = actorMap.get(joi);
+		   if (a.getType() == Actors.READER) {
+			   a.add(js);
+		   } else {
+			   //a.type == writer
+			   JvnRemoteServer tmp = null;
+			   while (!a.isEmpty()) {
+				   tmp = a.getFirst();
+				   idMap.put(joi,tmp.jvnInvalidateWriterForReader(joi));
+				   //a.remove(tmp);
+			   }
+			   a.changeType(Actors.READER);
+			   a.add(js);
+		   }
+		   return idMap.get(joi);
+	   } else {		   
+		   return null;
+	   }
    }
 
   /**
@@ -158,8 +205,31 @@ public class JvnCoordImpl
   **/
    public Serializable jvnLockWrite(int joi, JvnRemoteServer js)
    throws java.rmi.RemoteException, JvnException{
-    // to be completed
-    return null;
+	   if (actorMap.containsKey(joi) && idMap.containsKey(joi)) {
+		   
+		   Actors a = actorMap.get(joi);
+		   JvnRemoteServer tmp = null;
+		   System.out.println(a.listActors.size());
+		   System.out.println(a.getType());
+		   while (!a.isEmpty()) {
+			   tmp = a.getFirst();
+			   if (tmp != js) {
+				   if (a.getType() == Actors.READER) {
+					   tmp.jvnInvalidateReader(joi);
+				   } else {				   
+					   idMap.put(joi,tmp.jvnInvalidateWriter(joi));
+				   }
+			   } else {
+				   System.out.println("Au maximum je m'affiche une fois");
+			   }
+			   a.remove(tmp);
+		   }
+		   a.changeType(Actors.WRITER);
+		   a.add(js);
+		   return idMap.get(joi);
+	   } else {		   
+		   return null;
+	   }
    }
 
 	/**
@@ -169,7 +239,7 @@ public class JvnCoordImpl
 	**/
     public void jvnTerminate(JvnRemoteServer js)
 	 throws java.rmi.RemoteException, JvnException {
-	 // to be completed
+    	this.actorMap.forEach((key, value) -> value.remove(js));
     }
 }
 

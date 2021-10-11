@@ -16,23 +16,22 @@ public class JvnObjectImpl implements JvnObject {
 	}
 	
 	
-	private JvnLocalServer serv;
 	private Serializable obj;
 	private int id;
 	private STATES state;
 	
 	
-	public JvnObjectImpl(int id, JvnLocalServer s, Serializable o) {
-		this.serv = s;
+	public JvnObjectImpl(int id, Serializable o, STATES s) {
 		this.obj = o;
 		this.id = id;
-		this.state = STATES.NL;
+		this.state = s;
 	}
 	
 
 	@Override
 	public void jvnLockRead() throws JvnException {
-		synchronized(state) {
+		synchronized(this) {
+			System.out.println("Lock read");
 			switch(state) {
 				case RC:
 					state = STATES.R;
@@ -41,36 +40,42 @@ public class JvnObjectImpl implements JvnObject {
 					state = STATES.RWC;
 					break;
 				default:
-					obj = serv.jvnLockRead(jvnGetObjectId());
+					obj = JvnServerImpl.jvnGetServer().jvnLockRead(jvnGetObjectId());
 					state = STATES.R;
 			}
+			System.out.println(state);
 		}
 	}
 
 	@Override
 	public void jvnLockWrite() throws JvnException {
-		synchronized(state) {
+		synchronized(this) {
+			System.out.println("Lock write");
 			if(state != STATES.WC) {
-				obj = serv.jvnLockWrite(jvnGetObjectId());
+				obj = JvnServerImpl.jvnGetServer().jvnLockWrite(jvnGetObjectId());
 			}
 			state = STATES.W;
+			System.out.println(state);
 		}
 	}
 
 	@Override
 	public void jvnUnLock() throws JvnException {
-		switch(state) {
-			case R:
-				state = STATES.RC;
-				notify();
-				break;
-			case W:
-			case RWC:
-				state = STATES.WC;
-				notify();
-				break;
-			default:
-				throw new JvnException();
+		synchronized(this) {
+			System.out.println("Unlock : " + state);
+			switch(state) {
+				case R:
+					state = STATES.RC;
+					notify();
+					break;
+				case W:
+				case RWC:
+					state = STATES.WC;
+					notify();
+					break;
+				default:
+					break;
+			}
 		}
 	}
 
@@ -88,7 +93,7 @@ public class JvnObjectImpl implements JvnObject {
 
 	@Override
 	public void jvnInvalidateReader() throws JvnException {
-		synchronized(state) {
+		synchronized(this) {
 			if (state != STATES.RC && state != STATES.R) {
 				throw new JvnException("Bad invalidate lock reader");
 			}
@@ -106,7 +111,7 @@ public class JvnObjectImpl implements JvnObject {
 
 	@Override
 	public Serializable jvnInvalidateWriter() throws JvnException {
-		synchronized(state) {
+		synchronized(this) {
 			if (state != STATES.RWC && state != STATES.WC && state != STATES.W) {
 				throw new JvnException("Bad invalidate lock writer");
 			}
@@ -127,7 +132,7 @@ public class JvnObjectImpl implements JvnObject {
 
 	@Override
 	public Serializable jvnInvalidateWriterForReader() throws JvnException {
-		synchronized(state) {
+		synchronized(this) {
 			if (state != STATES.RWC && state != STATES.WC && state != STATES.W) {
 				throw new JvnException("Bad invalidate lock writer for reader");
 			}

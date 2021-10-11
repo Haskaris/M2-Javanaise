@@ -26,17 +26,19 @@ public interface JvnRemoteCoord extends Remote {
 	**/
 	public int jvnGetObjectId()
 	throws java.rmi.RemoteException,jvn.JvnException;  
-	
+
 	/**
 	* Associate a symbolic name with a JVN object
 	* @param jon : the JVN object name
 	* @param jo  : the JVN object 
-	* @param joi : the JVN object identification
 	* @param js  : the remote reference of the JVNServer
 	* @throws java.rmi.RemoteException,JvnException
 	**/
 	public void jvnRegisterObject(String jon, JvnObject jo, JvnRemoteServer js)
 	throws java.rmi.RemoteException,jvn.JvnException; 
+	
+	public void jvnRegisterObject(JvnObject jo, JvnRemoteServer js)
+			throws java.rmi.RemoteException,jvn.JvnException; 
 	
 	/**
 	* Get the reference of a JVN object managed by a given JVN server 

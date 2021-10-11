@@ -9,7 +9,14 @@
 
 package jvn;
 
+import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.HashMap;
+
+import org.apiguardian.api.API;
+
 import java.io.*;
 
 
@@ -24,6 +31,9 @@ public class JvnServerImpl
 	private static final long serialVersionUID = 1L;
 	// A JVN server is managed as a singleton 
 	private static JvnServerImpl js = null;
+	private HashMap<Integer, JvnObject> cache;
+	
+	private JvnRemoteCoord coordinator;
 
   /**
   * Default constructor
@@ -31,7 +41,11 @@ public class JvnServerImpl
   **/
 	private JvnServerImpl() throws Exception {
 		super();
-		// to be completed
+
+		Registry r = LocateRegistry.getRegistry(1099);
+		coordinator = (JvnRemoteCoord) r.lookup("coordinator");
+		
+		cache = new HashMap<>();
 	}
 	
   /**
@@ -56,7 +70,11 @@ public class JvnServerImpl
 	**/
 	public  void jvnTerminate()
 	throws jvn.JvnException {
-    // to be completed
+		try {
+			coordinator.jvnTerminate(this);
+		} catch (RemoteException e) {
+			throw new JvnException();
+		}
 	} 
 	
 	/**
@@ -65,9 +83,16 @@ public class JvnServerImpl
 	* @throws JvnException
 	**/
 	public  JvnObject jvnCreateObject(Serializable o)
-	throws jvn.JvnException { 
-		// to be completed 
-		return null; 
+	throws jvn.JvnException {
+		try {
+			int id = coordinator.jvnGetObjectId();
+			JvnObject jo = new JvnObjectImpl(id, o,JvnObjectImpl.STATES.W);
+			coordinator.jvnRegisterObject(jo, js);
+			cache.put(id, jo);
+			return jo;
+		} catch (RemoteException e) {
+			throw new JvnException();
+		}
 	}
 	
 	/**
@@ -78,7 +103,11 @@ public class JvnServerImpl
 	**/
 	public  void jvnRegisterObject(String jon, JvnObject jo)
 	throws jvn.JvnException {
-		// to be completed 
+		try {
+			coordinator.jvnRegisterObject(jon, jo, this);
+		} catch (RemoteException e) {
+			throw new JvnException();
+		}
 	}
 	
 	/**
@@ -89,8 +118,18 @@ public class JvnServerImpl
 	**/
 	public  JvnObject jvnLookupObject(String jon)
 	throws jvn.JvnException {
-    // to be completed 
-		return null;
+		try {
+			JvnObject jo = coordinator.jvnLookupObject(jon, this);
+			if (jo == null) {
+				return null;
+			} else {
+				int id = jo.jvnGetObjectId();
+				cache.put(id, jo);
+				return jo;
+			}
+		} catch (RemoteException e) {
+			throw new JvnException();
+		}
 	}	
 	
 	/**
@@ -101,8 +140,12 @@ public class JvnServerImpl
 	**/
    public Serializable jvnLockRead(int joi)
 	 throws JvnException {
-		// to be completed 
-		return null;
+		try {
+			Serializable toReturn = coordinator.jvnLockRead(joi, this);
+			return toReturn;
+		} catch (RemoteException e) {
+			throw new JvnException();
+		}
 
 	}	
 	/**
@@ -113,8 +156,12 @@ public class JvnServerImpl
 	**/
    public Serializable jvnLockWrite(int joi)
 	 throws JvnException {
-		// to be completed 
-		return null;
+		try {
+			Serializable toReturn = coordinator.jvnLockWrite(joi, this);
+			return toReturn;
+		} catch (RemoteException e) {
+			throw new JvnException();
+		}
 	}	
 
 	
@@ -127,7 +174,10 @@ public class JvnServerImpl
 	**/
   public void jvnInvalidateReader(int joi)
 	throws java.rmi.RemoteException,jvn.JvnException {
-		// to be completed 
+		JvnObject jo = cache.get(joi);
+		if(jo != null) {
+			jo.jvnInvalidateReader();
+		}
 	};
 	    
 	/**
@@ -138,8 +188,13 @@ public class JvnServerImpl
 	**/
   public Serializable jvnInvalidateWriter(int joi)
 	throws java.rmi.RemoteException,jvn.JvnException { 
-		// to be completed 
-		return null;
+	  	JvnObject jo = cache.get(joi);
+		if(jo != null) {
+			jo.jvnInvalidateReader();
+			return jo.jvnGetSharedObject();
+		} else {
+			throw new JvnException();
+		}
 	};
 	
 	/**
@@ -150,8 +205,13 @@ public class JvnServerImpl
 	**/
    public Serializable jvnInvalidateWriterForReader(int joi)
 	 throws java.rmi.RemoteException,jvn.JvnException { 
-		// to be completed 
-		return null;
+	   JvnObject jo = cache.get(joi);
+		if(jo != null) {
+			jo.jvnInvalidateWriterForReader();
+			return jo.jvnGetSharedObject();
+		} else {
+			throw new JvnException();
+		}
 	 };
 
 }
