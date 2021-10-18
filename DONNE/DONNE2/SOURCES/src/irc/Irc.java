@@ -103,7 +103,7 @@ public class Irc {
 		irc.sentence.jvnUnLock();
 		
 		// display the read value
-		irc.data.setText(s);
+		// irc.data.setText(s);
 		irc.text.append(s+"\n");
 	   } catch (JvnException je) {
 		   System.out.println("IRC problem : " + je.getMessage());

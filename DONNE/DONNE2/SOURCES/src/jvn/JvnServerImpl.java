@@ -190,8 +190,7 @@ public class JvnServerImpl
 	throws java.rmi.RemoteException,jvn.JvnException { 
 	  	JvnObject jo = cache.get(joi);
 		if(jo != null) {
-			jo.jvnInvalidateReader();
-			return jo.jvnGetSharedObject();
+			return jo.jvnInvalidateWriter(); // erreur avec invalidateReader
 		} else {
 			throw new JvnException();
 		}
@@ -207,8 +206,7 @@ public class JvnServerImpl
 	 throws java.rmi.RemoteException,jvn.JvnException { 
 	   JvnObject jo = cache.get(joi);
 		if(jo != null) {
-			jo.jvnInvalidateWriterForReader();
-			return jo.jvnGetSharedObject();
+			return jo.jvnInvalidateWriterForReader();
 		} else {
 			throw new JvnException();
 		}

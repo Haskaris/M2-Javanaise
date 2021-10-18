@@ -30,8 +30,8 @@ public class JvnObjectImpl implements JvnObject {
 
 	@Override
 	public void jvnLockRead() throws JvnException {
+		System.out.println("je veux lock read " + state);
 		synchronized(this) {
-			System.out.println("Lock read");
 			switch(state) {
 				case RC:
 					state = STATES.R;
@@ -43,26 +43,23 @@ public class JvnObjectImpl implements JvnObject {
 					obj = JvnServerImpl.jvnGetServer().jvnLockRead(jvnGetObjectId());
 					state = STATES.R;
 			}
-			System.out.println(state);
 		}
 	}
 
 	@Override
 	public void jvnLockWrite() throws JvnException {
+		System.out.println("je veux lock write " + state);
 		synchronized(this) {
-			System.out.println("Lock write");
 			if(state != STATES.WC) {
 				obj = JvnServerImpl.jvnGetServer().jvnLockWrite(jvnGetObjectId());
 			}
 			state = STATES.W;
-			System.out.println(state);
 		}
 	}
 
 	@Override
 	public void jvnUnLock() throws JvnException {
 		synchronized(this) {
-			System.out.println("Unlock : " + state);
 			switch(state) {
 				case R:
 					state = STATES.RC;
@@ -94,11 +91,13 @@ public class JvnObjectImpl implements JvnObject {
 	@Override
 	public void jvnInvalidateReader() throws JvnException {
 		synchronized(this) {
+			System.out.println("on recupere R");
 			if (state != STATES.RC && state != STATES.R) {
-				throw new JvnException("Bad invalidate lock reader");
+				throw new JvnException("Bad invalidate lock reader " + state);
 			}
 			try {
 				while(state == STATES.R) {
+					System.out.println("je me met en attente pour enlever R");
 					wait();
 				}
 				state = STATES.NL;
@@ -112,12 +111,14 @@ public class JvnObjectImpl implements JvnObject {
 	@Override
 	public Serializable jvnInvalidateWriter() throws JvnException {
 		synchronized(this) {
+			System.out.println("on recupere W");
 			if (state != STATES.RWC && state != STATES.WC && state != STATES.W) {
-				throw new JvnException("Bad invalidate lock writer");
+				throw new JvnException("Bad invalidate lock writer " + state);
 			}
 			
 			try {
 				while(state == STATES.RWC || state == STATES.W) {
+					System.out.println("je me met en attente pour enlever W et RWC");
 					wait();
 				}
 				state = STATES.NL;
@@ -133,12 +134,14 @@ public class JvnObjectImpl implements JvnObject {
 	@Override
 	public Serializable jvnInvalidateWriterForReader() throws JvnException {
 		synchronized(this) {
+			System.out.println("on recupere W en laissant R");
 			if (state != STATES.RWC && state != STATES.WC && state != STATES.W) {
-				throw new JvnException("Bad invalidate lock writer for reader");
+				throw new JvnException("Bad invalidate lock writer for reader " + state);
 			}
 			
 			try {
 				while(state == STATES.W) {
+					System.out.println("je me met en attente pour enlever W");
 					wait();
 				}
 			} catch(Exception e) {

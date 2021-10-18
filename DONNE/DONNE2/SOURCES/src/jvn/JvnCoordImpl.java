@@ -29,17 +29,36 @@ class Actors{
 	
 	private boolean type;
 	public List<JvnRemoteServer> listActors;
+	private int taille;
 	
 	Actors(){
 		listActors = new ArrayList<>();
+		taille = 0;
 	}
 	
 	public void add(JvnRemoteServer j) {
+		if(type == READER) {
+			System.out.println("ajout reader");
+		}
+		else {
+			System.out.println("ajout ecrivain");
+		}
 		listActors.add(j);
+		taille++;
 	}
 	
-	public void remove(JvnRemoteServer j) {
-		listActors.remove(j);
+	public void remove() {
+		if(type == READER) {
+			System.out.println("retrait reader");
+		}
+		else {
+			System.out.println("retrait ecrivain");
+		}
+		listActors.remove(0);
+		taille--;
+	}
+	public void remove(JvnRemoteServer js) {
+		listActors.remove(js);
 	}
 	
 	public boolean getType() {
@@ -56,6 +75,10 @@ class Actors{
 	
 	public void changeType(boolean t) {
 		this.type = t;
+	}
+	
+	public int getTaille(){
+		return taille;
 	}
 	
 	
@@ -127,6 +150,8 @@ public class JvnCoordImpl
   	  this.actorMap.put(tmpId, new Actors());
   	  actorMap.get(tmpId).changeType(Actors.WRITER);
   	  actorMap.get(tmpId).add(js);
+  	  
+  	  System.out.println("enregistré !");
    }
   
   /**
@@ -155,6 +180,7 @@ public class JvnCoordImpl
 	  if(nameMap.containsKey(jon)) {
 		  int jvnId = nameMap.get(jon);
 		  if(idMap.containsKey(jvnId)) {
+			  System.out.println("objet trouvé");
 			  JvnObject toReturn = new JvnObjectImpl(jvnId, idMap.get(jvnId), JvnObjectImpl.STATES.NL);
 			  return toReturn;
 		  }
@@ -162,6 +188,7 @@ public class JvnCoordImpl
 			  throw new jvn.JvnException();
 		  }
 	  }
+	  System.out.println("objet non trouvé");
 	  return null;
   }
   
@@ -177,16 +204,14 @@ public class JvnCoordImpl
 	   if (actorMap.containsKey(joi) && idMap.containsKey(joi)) {
 		   
 		   Actors a = actorMap.get(joi);
+		   System.out.println("lockRead actor == reader ? " + (a.getType() == Actors.READER) + " actor_length " + a.getTaille());
 		   if (a.getType() == Actors.READER) {
 			   a.add(js);
 		   } else {
 			   //a.type == writer
 			   JvnRemoteServer tmp = null;
-			   while (!a.isEmpty()) {
-				   tmp = a.getFirst();
-				   idMap.put(joi,tmp.jvnInvalidateWriterForReader(joi));
-				   //a.remove(tmp);
-			   }
+			   tmp = a.getFirst();
+			   idMap.put(joi,tmp.jvnInvalidateWriterForReader(joi));
 			   a.changeType(Actors.READER);
 			   a.add(js);
 		   }
@@ -204,25 +229,27 @@ public class JvnCoordImpl
   * @throws java.rmi.RemoteException, JvnException
   **/
    public Serializable jvnLockWrite(int joi, JvnRemoteServer js)
-   throws java.rmi.RemoteException, JvnException{
+		   throws java.rmi.RemoteException, JvnException{
+	   
 	   if (actorMap.containsKey(joi) && idMap.containsKey(joi)) {
-		   
+
 		   Actors a = actorMap.get(joi);
+		   System.out.println("lockWrite actor == reader ? " + (a.getType() == Actors.READER) + " actor_length " + a.getTaille());
 		   JvnRemoteServer tmp = null;
-		   System.out.println(a.listActors.size());
-		   System.out.println(a.getType());
 		   while (!a.isEmpty()) {
+			   System.out.println("boucle");
 			   tmp = a.getFirst();
-			   if (tmp != js) {
-				   if (a.getType() == Actors.READER) {
+			   if (a.getType() == Actors.READER) {
+				   if(!js.equals(tmp)) {
 					   tmp.jvnInvalidateReader(joi);
-				   } else {				   
-					   idMap.put(joi,tmp.jvnInvalidateWriter(joi));
+				   }
+				   else {
+					   System.out.println("appelant");
 				   }
 			   } else {
-				   System.out.println("Au maximum je m'affiche une fois");
+				   idMap.put(joi,tmp.jvnInvalidateWriter(joi));
 			   }
-			   a.remove(tmp);
+			   a.remove();
 		   }
 		   a.changeType(Actors.WRITER);
 		   a.add(js);
