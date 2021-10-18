@@ -18,7 +18,6 @@ public class Sentence implements java.io.Serializable {
 	public Sentence() {
 		data = new String("");
 	}
-	
 	public void write(String text) {
 		data = text;
 	}
