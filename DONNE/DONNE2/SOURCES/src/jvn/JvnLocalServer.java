@@ -20,6 +20,15 @@ import java.io.Serializable;
 public interface JvnLocalServer {
 	
 	/**
+	 * retrieve or create an object with its name
+	 * @param jon its name
+	 * @param o the object
+	 * @return the JVN Object
+	 * @throws JvnException
+	 */
+	public JvnObject jvnLookOrCreate(String jon, Serializable o) throws JvnException;
+	
+	/**
 	* create of a JVN object
 	* @param jos : the JVN object state
   * @return the JVN object 

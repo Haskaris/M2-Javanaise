@@ -9,6 +9,7 @@
 
 package jvn;
 
+import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
@@ -16,6 +17,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+import compteur.Compteur;
 import irc.Irc;
 import irc.Sentence;
 import sun.rmi.registry.RegistryImpl;
@@ -152,6 +154,22 @@ implements JvnRemoteCoord{
 		actorMap.get(tmpId).add(js);
 
 		System.out.println("enregistr� !");
+	}
+
+	public JvnObject jvnLookOrCreate(String jon,Serializable o,JvnRemoteServer js) throws RemoteException, JvnException {
+		synchronized(this) {
+			JvnObject toReturn;
+			toReturn = jvnLookupObject(jon,js);
+
+			if (toReturn == null) {
+				int joi = jvnGetObjectId();
+				toReturn =  new JvnObjectImpl(joi,o,JvnObjectImpl.STATES.W);
+				toReturn.jvnUnLock();
+				jvnRegisterObject(toReturn,js);
+				jvnRegisterObject(jon, toReturn,js);
+			}
+			return toReturn;
+		}
 	}
 
 	/**

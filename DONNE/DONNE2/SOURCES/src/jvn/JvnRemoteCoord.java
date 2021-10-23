@@ -49,6 +49,11 @@ public interface JvnRemoteCoord extends Remote {
 	public JvnObject jvnLookupObject(String jon, JvnRemoteServer js)
 	throws java.rmi.RemoteException,jvn.JvnException; 
 	
+	
+	public JvnObject jvnLookOrCreate(String jon,Serializable o,JvnRemoteServer js)
+	throws java.rmi.RemoteException,jvn.JvnException; 
+	
+	
 	/**
 	* Get a Read lock on a JVN object managed by a given JVN server 
 	* @param joi : the JVN object identification

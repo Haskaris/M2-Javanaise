@@ -96,6 +96,23 @@ public class JvnServerImpl
 	}
 	
 	/**
+	 * retrieve or create an object with its name
+	 * @param jon its name
+	 * @param o the object
+	 * @return the JVN Object
+	 * @throws JvnException
+	 */
+	public JvnObject jvnLookOrCreate(String jon, Serializable o) throws JvnException {
+		try {
+			JvnObject toReturn =  coordinator.jvnLookOrCreate(jon,o,this);
+			cache.put(toReturn.jvnGetObjectId(), toReturn);
+			return toReturn;
+		} catch (RemoteException | JvnException e) {
+			throw new JvnException();
+		}
+	}
+	
+	/**
 	*  Associate a symbolic name with a JVN object
 	* @param jon : the JVN object name
 	* @param jo : the JVN object 
