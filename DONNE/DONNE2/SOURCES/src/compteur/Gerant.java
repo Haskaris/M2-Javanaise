@@ -24,19 +24,13 @@ public class Gerant implements Runnable{
 			
 			// look up the IRC object in the JVN server
 			// if not found, create it, and register it in the JVN server
-			JvnObject jo = js.jvnLookupObject("Compteur");
-			   
-			if (jo == null) {
-				jo = js.jvnCreateObject((Serializable) new Compteur());
-				// after creation, I have a write lock on the object
-				jo.jvnUnLock();
-				js.jvnRegisterObject("Compteur", jo);
-			}
+			JvnObject jo = js.jvnLookOrCreate("Compteur", new Compteur());
+			
 			
 			for(int i = 0 ; i < 10 ; i++) {
 				jo.jvnLockWrite();
 				int tmp = ((Compteur) jo.jvnGetSharedObject()).get();
-				System.out.println(args[0] + " : " + tmp);
+				//System.out.println(args[0] + " : " + tmp);
 				Thread.sleep(r.nextInt(15));
 				((Compteur) jo.jvnGetSharedObject()).change(tmp+1);
 				jo.jvnUnLock();
