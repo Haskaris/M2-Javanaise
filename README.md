@@ -12,6 +12,9 @@ Pour lancer le test (le coordinateur n'est pas requis) :
  - Si le fichier n'a pas les droits d'execution, se donner les droits de l'executer (chmod +x test_compteur.sh)
  - ``./test_compteur.sh``
 
+Pour modifier le test (passer de 5 à 4 gérants ou inversement)
+Modifier la variable nb (4 = 4 gérants, autres = 5 gérants)
+
 ## IRC
 Il faut lancer le coordinateur et autant de client IRC que souhaité
 
