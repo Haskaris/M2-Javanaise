@@ -39,23 +39,11 @@ class Actors{
 	}
 
 	public void add(JvnRemoteServer j) {
-		if(type == READER) {
-			System.out.println("ajout reader");
-		}
-		else {
-			System.out.println("ajout ecrivain");
-		}
 		listActors.add(j);
 		taille++;
 	}
 
 	public void remove() {
-		if(type == READER) {
-			System.out.println("retrait reader");
-		}
-		else {
-			System.out.println("retrait ecrivain");
-		}
 		listActors.remove(0);
 		taille--;
 	}
@@ -152,8 +140,6 @@ implements JvnRemoteCoord{
 		this.actorMap.put(tmpId, new Actors());
 		actorMap.get(tmpId).changeType(Actors.WRITER);
 		actorMap.get(tmpId).add(js);
-
-		System.out.println("enregistr� !");
 	}
 
 	public JvnObject jvnLookOrCreate(String jon,Serializable o,JvnRemoteServer js) throws RemoteException, JvnException {
@@ -195,21 +181,17 @@ implements JvnRemoteCoord{
 	 **/
 	public JvnObject jvnLookupObject(String jon, JvnRemoteServer js)
 			throws java.rmi.RemoteException,jvn.JvnException{
-		synchronized(this) {
-			if(nameMap.containsKey(jon)) {
-				int jvnId = nameMap.get(jon);
-				if(idMap.containsKey(jvnId)) {
-					System.out.println("objet trouvé");
-					JvnObject toReturn = new JvnObjectImpl(jvnId, idMap.get(jvnId), JvnObjectImpl.STATES.NL);
-					return toReturn;
-				}
-				else {
-					throw new jvn.JvnException();
-				}
+		if(nameMap.containsKey(jon)) {
+			int jvnId = nameMap.get(jon);
+			if(idMap.containsKey(jvnId)) {
+				JvnObject toReturn = new JvnObjectImpl(jvnId, idMap.get(jvnId), JvnObjectImpl.STATES.NL);
+				return toReturn;
 			}
-			System.out.println("objet non trouv�");
-			return null;
+			else {
+				throw new jvn.JvnException();
+			}
 		}
+		return null;
 	}
 
 	/**
@@ -225,11 +207,9 @@ implements JvnRemoteCoord{
 			if (actorMap.containsKey(joi) && idMap.containsKey(joi)) {
 
 				Actors a = actorMap.get(joi);
-				System.out.println("lockRead actor == reader ? " + (a.getType() == Actors.READER) + " actor_length " + a.getTaille());
 				if (a.getType() == Actors.READER) {
 					a.add(js);
 				} else {
-					//a.type == writer
 					JvnRemoteServer tmp = null;
 					tmp = a.getFirst();
 					idMap.put(joi,tmp.jvnInvalidateWriterForReader(joi));
@@ -257,17 +237,12 @@ implements JvnRemoteCoord{
 			if (actorMap.containsKey(joi) && idMap.containsKey(joi)) {
 
 				Actors a = actorMap.get(joi);
-				System.out.println("lockWrite actor == reader ? " + (a.getType() == Actors.READER) + " actor_length " + a.getTaille());
 				JvnRemoteServer tmp = null;
 				while (!a.isEmpty()) {
-					System.out.println("boucle");
 					tmp = a.getFirst();
 					if (a.getType() == Actors.READER) {
 						if(!js.equals(tmp)) {
 							tmp.jvnInvalidateReader(joi);
-						}
-						else {
-							System.out.println("appelant");
 						}
 					} else {
 						idMap.put(joi,tmp.jvnInvalidateWriter(joi));

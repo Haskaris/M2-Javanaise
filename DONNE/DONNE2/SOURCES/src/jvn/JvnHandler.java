@@ -53,7 +53,7 @@ public class JvnHandler implements InvocationHandler {
 			jo.jvnUnLock();
 		} else { 
 			System.out.println("Elle n'est pas en ligne");
-			throw new JvnException("aucune annotation sur la méthode appelée");
+			throw new JvnException("aucune annotation sur la mï¿½thode appelï¿½e");
 		}
 		return toReturn;
 	}

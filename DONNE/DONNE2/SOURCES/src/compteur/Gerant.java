@@ -26,20 +26,26 @@ public class Gerant implements Runnable{
 			// if not found, create it, and register it in the JVN server
 			JvnObject jo = js.jvnLookOrCreate("Compteur", new Compteur());
 			
+			jo.setName(args[0]);
+			
 			
 			for(int i = 0 ; i < 10 ; i++) {
 				jo.jvnLockWrite();
 				int tmp = ((Compteur) jo.jvnGetSharedObject()).get();
-				//System.out.println(args[0] + " : " + tmp);
-				Thread.sleep(r.nextInt(15));
+				Thread.sleep(r.nextInt(150));
+				System.out.println(args[0] + " : " + tmp + ", i :" +  i);
 				((Compteur) jo.jvnGetSharedObject()).change(tmp+1);
 				jo.jvnUnLock();
+				Thread.sleep(1);
 			}
+			jo.jvnLockRead();
+			System.out.println(args[0] + " " + ((Compteur) jo.jvnGetSharedObject()).get());
+			jo.jvnUnLock();
 			
 			
 		   
 		   } catch (Exception e) {
-			   System.out.println("IRC problem : " + e.getMessage());
+			   System.out.println("IRC problem : [" + args[0] + "] " + e.getMessage());
 			   e.printStackTrace();
 		   }
 
